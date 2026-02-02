@@ -1,5 +1,6 @@
 package maze;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
@@ -20,13 +21,23 @@ public abstract class Entity {
 		this.y = y;
 	}
 
-	public void update() {
-		x += dx;
-		y += dy;
+	public void update(MazeMap map) {
+
+		int nextX = x + dx;
+		int nextY = y + dy;
+
+		if (!map.isWall(nextX, y)) {
+			x = nextX;
+		}
+
+		if (!map.isWall(x, nextY)) {
+			y = nextY;
+		}
+
 		animate();
 	}
 
-	private void animate() {
+	protected void animate() {
 		BufferedImage[] frames = animations.get(currentState);
 		if (frames == null)
 			return;
@@ -40,9 +51,32 @@ public abstract class Entity {
 
 	public void draw(Graphics2D g) {
 		BufferedImage[] frames = animations.get(currentState);
-		if (frames != null) {
+		if (frames != null && frames[frameIndex] != null) {
 			g.drawImage(frames[frameIndex], x, y, null);
+			return;
 		}
+
+		switch (currentState) {
+		case WALK_UP:
+			g.setColor(Color.BLUE);
+			break;
+		case WALK_DOWN:
+			g.setColor(Color.GREEN);
+			break;
+		case WALK_LEFT:
+			g.setColor(Color.ORANGE);
+			break;
+		case WALK_RIGHT:
+			g.setColor(Color.CYAN);
+			break;
+		case HIT:
+			g.setColor(Color.RED);
+			break;
+		default:
+			g.setColor(Color.GRAY);
+		}
+
+		g.fillRect(x, y, 40, 40);
 	}
 
 	protected void setState(AnimationState state) {

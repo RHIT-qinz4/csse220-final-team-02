@@ -4,77 +4,67 @@ public class Zombie extends Entity {
 
 	private int moveTimer = 0;
 
-	private boolean isHit = false;
-	private int hitTimer = 0;
-
 	public Zombie(int x, int y) {
 		super(x, y);
 
-		// WALK DOWN
-		animations.put(AnimationState.WALK_DOWN, new java.awt.image.BufferedImage[] { SpriteLoader.load("z_down1.png"),
-				SpriteLoader.load("z_down2.png"), SpriteLoader.load("z_down3.png") });
+		animations.put(AnimationState.WALK_DOWN,
+				new java.awt.image.BufferedImage[] { SpriteLoader.load("z_down1.png", 40, 40),
+						SpriteLoader.load("z_down2.png", 40, 40), SpriteLoader.load("z_down3.png", 40, 40) });
 
-		// WALK UP
-		animations.put(AnimationState.WALK_UP, new java.awt.image.BufferedImage[] { SpriteLoader.load("z_up1.png"),
-				SpriteLoader.load("z_up2.png"), SpriteLoader.load("z_up3.png") });
+		animations.put(AnimationState.WALK_UP,
+				new java.awt.image.BufferedImage[] { SpriteLoader.load("z_up1.png", 40, 40),
+						SpriteLoader.load("z_up2.png", 40, 40), SpriteLoader.load("z_up3.png", 40, 40) });
 
-		// WALK LEFT
-		animations.put(AnimationState.WALK_LEFT, new java.awt.image.BufferedImage[] { SpriteLoader.load("z_left1.png"),
-				SpriteLoader.load("z_left2.png"), SpriteLoader.load("z_left3.png") });
+		animations.put(AnimationState.WALK_LEFT,
+				new java.awt.image.BufferedImage[] { SpriteLoader.load("z_left1.png", 40, 40),
+						SpriteLoader.load("z_left2.png", 40, 40), SpriteLoader.load("z_left3.png", 40, 40) });
 
-		// WALK RIGHT
 		animations.put(AnimationState.WALK_RIGHT,
-				new java.awt.image.BufferedImage[] { SpriteLoader.load("z_right1.png"),
-						SpriteLoader.load("z_right2.png"), SpriteLoader.load("z_right3.png") });
-
-		// HIT ANIMATION
-		animations.put(AnimationState.HIT, new java.awt.image.BufferedImage[] { SpriteLoader.load("z_hit1.png"),
-				SpriteLoader.load("z_hit2.png"), SpriteLoader.load("z_hit3.png") });
+				new java.awt.image.BufferedImage[] { SpriteLoader.load("z_right1.png", 40, 40),
+						SpriteLoader.load("z_right2.png", 40, 40), SpriteLoader.load("z_right3.png", 40, 40) });
 
 		setRandomDirection();
 	}
 
 	private void setRandomDirection() {
-		int dir = (int) (Math.random() * 4);
 
-		dx = 0;
-		dy = 0;
+		int speed = 2;
 
-		switch (dir) {
-		case 0:
-			dy = -2;
-			setState(AnimationState.WALK_UP);
-			break;
-		case 1:
-			dy = 2;
-			setState(AnimationState.WALK_DOWN);
-			break;
-		case 2:
-			dx = -2;
-			setState(AnimationState.WALK_LEFT);
-			break;
-		case 3:
-			dx = 2;
+		int[][] directions = { { speed, speed }, { -speed, speed }, { speed, -speed }, { -speed, -speed } };
+
+		int[] dir = directions[(int) (Math.random() * directions.length)];
+
+		dx = dir[0];
+		dy = dir[1];
+
+		if (dx > 0)
 			setState(AnimationState.WALK_RIGHT);
-			break;
-		}
+		else
+			setState(AnimationState.WALK_LEFT);
 	}
 
 	@Override
-	public void update() {
-		super.update();
+	public void update(MazeMap map) {
 
-		// Handle hit animation
-		if (isHit) {
-			hitTimer--;
-			if (hitTimer <= 0) {
-				isHit = false;
-				setRandomDirection();
-			}
-			return;
+		int nextX = x + dx;
+		int nextY = y + dy;
+
+		boolean hitVerticalWall = map.isWall(nextX, y);
+		boolean hitHorizontalWall = map.isWall(x, nextY);
+
+		if (hitVerticalWall) {
+			dx = -dx;
 		}
 
-		// Change direction every ~1 second
+		if (hitHorizontalWall) {
+			dy = -dy;
+		}
+
+		x += dx;
+		y += dy;
+
+		animate();
+
 		moveTimer++;
 		if (moveTimer > 60) {
 			setRandomDirection();
@@ -82,11 +72,4 @@ public class Zombie extends Entity {
 		}
 	}
 
-	public void getHit() {
-		isHit = true;
-		hitTimer = 40;
-		dx = 0;
-		dy = 0;
-		setState(AnimationState.HIT);
-	}
 }

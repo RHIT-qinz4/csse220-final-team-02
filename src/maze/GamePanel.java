@@ -1,5 +1,7 @@
 package maze;
 
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
@@ -12,16 +14,22 @@ import javax.swing.JPanel;
 
 public class GamePanel extends JPanel implements ActionListener {
 
+	private MazeMap map;
+
 	private Player player;
 	private ArrayList<Entity> entities;
 
 	public GamePanel() {
 		setFocusable(true);
 
-		player = new Player(200, 200);
+		map = new MazeMap();
+
+		player = new Player(60, 60);
+		Zombie zombie = new Zombie(300, 300);
+
 		entities = new ArrayList<>();
 		entities.add(player);
-		entities.add(new Zombie(400, 300));
+		entities.add(zombie);
 
 		addKeyListener(new KeyAdapter() {
 			@Override
@@ -39,7 +47,7 @@ public class GamePanel extends JPanel implements ActionListener {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		for (Entity entity : entities) {
-			entity.update();
+			entity.update(map);
 		}
 		repaint();
 	}
@@ -49,8 +57,16 @@ public class GamePanel extends JPanel implements ActionListener {
 		super.paintComponent(g);
 		Graphics2D g2 = (Graphics2D) g;
 
+		map.draw(g2);
+
 		for (Entity entity : entities) {
 			entity.draw(g2);
+		}
+
+		if (SpriteLoader.missingSprites) {
+			g2.setColor(Color.RED);
+			g2.setFont(new Font("Arial", Font.BOLD, 18));
+			g2.drawString("Sprites not found — using placeholders", 40, 40);
 		}
 	}
 }
