@@ -2,6 +2,7 @@ package maze;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
 
@@ -77,6 +78,23 @@ public abstract class Entity {
 		}
 
 		g.fillRect(x, y, 40, 40);
+	}
+
+	public Rectangle getBounds() {
+		return new Rectangle(x, y, 40, 40);
+	}
+
+	public int getX() {
+		return x;
+	}
+
+	public int getY() {
+		return y;
+	}
+
+	public void setPosition(int x, int y) {
+		this.x = x;
+		this.y = y;
 	}
 
 	protected void setState(AnimationState state) {

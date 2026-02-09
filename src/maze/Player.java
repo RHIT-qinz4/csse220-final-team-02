@@ -4,6 +4,26 @@ import java.awt.event.KeyEvent;
 
 public class Player extends Entity {
 
+	private int hp = 5;
+	private int points = 0;
+
+	public int getHP() {
+		return hp;
+	}
+
+	public int getPoints() {
+		return points;
+	}
+
+	public void addPoint() {
+		points++;
+	}
+
+	public void damage() {
+		hp--;
+		setState(AnimationState.HIT);
+	}
+
 	public Player(int x, int y) {
 		super(x, y);
 

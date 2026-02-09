@@ -28,7 +28,7 @@ public class Zombie extends Entity {
 
 	private void setRandomDirection() {
 
-		int speed = 2;
+		int speed = 1;
 
 		int[][] directions = { { speed, speed }, { -speed, speed }, { speed, -speed }, { -speed, -speed } };
 
@@ -69,6 +69,36 @@ public class Zombie extends Entity {
 		if (moveTimer > 60) {
 			setRandomDirection();
 			moveTimer = 0;
+		}
+	}
+
+	public void knockBack(Player p, MazeMap map) {
+
+		int push = 30;
+
+		int dx = this.x - p.getX();
+		int dy = this.y - p.getY();
+
+		int newX = x;
+		int newY = y;
+
+		if (dx > 0)
+			newX += push;
+		else
+			newX -= push;
+
+		if (dy > 0)
+			newY += push;
+		else
+			newY -= push;
+
+		// Only move if not into a wall
+		if (!map.isWall(newX, y)) {
+			x = newX;
+		}
+
+		if (!map.isWall(x, newY)) {
+			y = newY;
 		}
 	}
 
