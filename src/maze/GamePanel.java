@@ -73,6 +73,9 @@ public class GamePanel extends JPanel implements ActionListener {
 		Graphics2D g2 = (Graphics2D) g;
 
 		map.draw(g2);
+		g2.drawString("Health: " + Integer.toString(player.getHP()), 20, 30);
+		g2.drawString("Points: " + Integer.toString(player.getPoints()), 120, 30);
+		if(gameOver) g2.drawString("GAME OVER", 20, 40);
 
 		for (Entity entity : entities) {
 			entity.draw(g2);
