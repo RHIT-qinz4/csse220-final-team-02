@@ -1,21 +1,24 @@
 package maze;
 
 import javax.swing.JFrame;
-import javax.swing.Timer;
+import javax.swing.SwingUtilities;
 
 public class Main {
 
 	public static void main(String[] args) {
+		SwingUtilities.invokeLater(() -> {
+			JFrame window = new JFrame("Maze: Zombies and Gems");
+			window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			window.setResizable(false);
 
-		JFrame frame = new JFrame("Maze Game");
-		GamePanel panel = new GamePanel();
+			GamePanel panel = new GamePanel();
+			window.add(panel);
+			window.pack();
+			window.setLocationRelativeTo(null);
+			window.setVisible(true);
 
-		frame.add(panel);
-		frame.setSize(800, 600);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setVisible(true);
-
-		Timer timer = new Timer(16, panel); // ~60 FPS
-		timer.start();
+			panel.requestFocusInWindow();
+			panel.startGameThread();
+		});
 	}
 }

@@ -1,107 +1,34 @@
 package maze;
 
-import java.awt.Color;
-import java.awt.Graphics2D;
+import java.awt.Graphics;
 import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
-import java.util.HashMap;
 
 public abstract class Entity {
 
-	protected int x, y;
-	protected int dx, dy;
+	protected float x;
 
-	protected HashMap<AnimationState, BufferedImage[]> animations = new HashMap<>();
-	protected AnimationState currentState = AnimationState.IDLE;
+	protected float y;
 
-	private int frameIndex = 0;
-	private int frameDelay = 0;
-
-	public Entity(int x, int y) {
+	public Entity(float x, float y) {
 		this.x = x;
 		this.y = y;
 	}
 
-	public void update(MazeMap map) {
-
-		int nextX = x + dx;
-		int nextY = y + dy;
-
-		if (!map.isWall(nextX, y)) {
-			x = nextX;
-		}
-
-		if (!map.isWall(x, nextY)) {
-			y = nextY;
-		}
-
-		animate();
+	public int getPixelX() {
+		return Math.round(x);
 	}
 
-	protected void animate() {
-		BufferedImage[] frames = animations.get(currentState);
-		if (frames == null)
-			return;
-
-		frameDelay++;
-		if (frameDelay > 8) {
-			frameIndex = (frameIndex + 1) % frames.length;
-			frameDelay = 0;
-		}
-	}
-
-	public void draw(Graphics2D g) {
-		BufferedImage[] frames = animations.get(currentState);
-		if (frames != null && frames[frameIndex] != null) {
-			g.drawImage(frames[frameIndex], x, y, null);
-			return;
-		}
-
-		switch (currentState) {
-		case WALK_UP:
-			g.setColor(Color.BLUE);
-			break;
-		case WALK_DOWN:
-			g.setColor(Color.GREEN);
-			break;
-		case WALK_LEFT:
-			g.setColor(Color.ORANGE);
-			break;
-		case WALK_RIGHT:
-			g.setColor(Color.CYAN);
-			break;
-		case HIT:
-			g.setColor(Color.RED);
-			break;
-		default:
-			g.setColor(Color.GRAY);
-		}
-
-		g.fillRect(x, y, 40, 40);
+	public int getPixelY() {
+		return Math.round(y);
 	}
 
 	public Rectangle getBounds() {
-		return new Rectangle(x, y, 40, 40);
+		int inset = 4;
+		return new Rectangle(getPixelX() + inset, getPixelY() + inset, MazeMap.TILE_SIZE - inset * 2,
+				MazeMap.TILE_SIZE - inset * 2);
 	}
 
-	public int getX() {
-		return x;
-	}
+	public abstract void update(MazeMap map);
 
-	public int getY() {
-		return y;
-	}
-
-	public void setPosition(int x, int y) {
-		this.x = x;
-		this.y = y;
-	}
-
-	protected void setState(AnimationState state) {
-		if (state != currentState) {
-			currentState = state;
-			frameIndex = 0;
-			frameDelay = 0;
-		}
-	}
+	public abstract void draw(Graphics g);
 }
