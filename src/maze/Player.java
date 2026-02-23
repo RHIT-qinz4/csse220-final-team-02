@@ -13,20 +13,23 @@ public class Player extends Entity {
 	private static final int ANIM_FRAME_DURATION = 10;
 	private static final int NUM_FRAMES = 3;
 
-	// Block mechanic constants
-	public static final int BLOCK_DURATION_TICKS = 60; // 1 second at 60 FPS
-	public static final int BLOCK_MAX_CHARGE = 300; // 5 seconds to fully recharge
+	/** Ticks the shield block lasts when active . */
+	public static final int BLOCK_DURATION_TICKS = 60;
+
+	/**
+	 * Block charge needed to activate the shield .
+	 */
+	public static final int BLOCK_MAX_CHARGE = 300;
 
 	private int lives = 3;
 	private int score = 0;
 	private int keysHeld = 0;
 	private int damageCooldown = 0;
 
-	// Block state
 	private boolean blockHeld = false;
 	private boolean blocking = false;
-	private int blockTicks = 0; // counts down while blocking
-	private int blockCharge = BLOCK_MAX_CHARGE; // current charge (full = ready)
+	private int blockTicks = 0;
+	private int blockCharge = BLOCK_MAX_CHARGE;
 
 	private boolean movingUp, movingDown, movingLeft, movingRight;
 
@@ -41,6 +44,11 @@ public class Player extends Entity {
 		frames = SpriteLoader.loadPlayerFrames(MazeMap.TILE_SIZE);
 	}
 
+	/**
+	 * Records a key-press event.
+	 *
+	 * @param e the key event from the Swing listener
+	 */
 	public void keyPressed(KeyEvent e) {
 		switch (e.getKeyCode()) {
 		case KeyEvent.VK_W, KeyEvent.VK_UP -> movingUp = true;
@@ -51,6 +59,11 @@ public class Player extends Entity {
 		}
 	}
 
+	/**
+	 * Records a key-release event.
+	 *
+	 * @param e the key event from the Swing listener
+	 */
 	public void keyReleased(KeyEvent e) {
 		switch (e.getKeyCode()) {
 		case KeyEvent.VK_W, KeyEvent.VK_UP -> movingUp = false;
@@ -61,25 +74,27 @@ public class Player extends Entity {
 		}
 	}
 
+	/**
+	 * Advances player state one tick: damage cooldown, block logic, movement, and
+	 * animation.
+	 *
+	 * @param map the current maze, used for wall-collision checks
+	 */
 	@Override
 	public void update(MazeMap map) {
 		if (damageCooldown > 0)
 			damageCooldown--;
 
-		// --- Block logic ---
+		// Block logic
 		if (blocking) {
 			blockTicks--;
 			if (blockTicks <= 0) {
-				// Block expired — start recharging from 0
 				blocking = false;
 				blockCharge = 0;
 			}
 		} else {
-			// Recharge when not blocking
 			if (blockCharge < BLOCK_MAX_CHARGE)
 				blockCharge++;
-
-			// Activate block only when fully charged and key is held
 			if (blockHeld && blockCharge >= BLOCK_MAX_CHARGE) {
 				blocking = true;
 				blockTicks = BLOCK_DURATION_TICKS;
@@ -99,34 +114,34 @@ public class Player extends Entity {
 		if (dx != 0 && dy != 0) {
 			dx *= 0.707f;
 			dy *= 0.707f;
-		}
+		} // normalise diagonal
 
 		updateAnimState(dx, dy);
 		moveAxis(map, dx, 0);
 		moveAxis(map, 0, dy);
 
 		if (dx != 0 || dy != 0) {
-			animTick++;
-			if (animTick >= ANIM_FRAME_DURATION) {
+			if (++animTick >= ANIM_FRAME_DURATION) {
 				animTick = 0;
 				animFrame = (animFrame + 1) % NUM_FRAMES;
 			}
 		} else {
-			animTick = 0;
-			animFrame = 0;
+			animTick = animFrame = 0;
 		}
 	}
 
+	/**
+	 * Moves along one axis, cancelling the move if any corner would hit a wall.
+	 *
+	 * @param dx horizontal delta (0 for vertical-only move)
+	 * @param dy vertical delta (0 for horizontal-only move)
+	 */
 	private void moveAxis(MazeMap map, float dx, float dy) {
-		float newX = x + dx;
-		float newY = y + dy;
-		int ts = MazeMap.TILE_SIZE;
-		int inset = 2;
+		float newX = x + dx, newY = y + dy;
+		int ts = MazeMap.TILE_SIZE, inset = 2;
 
-		int left = (int) (newX + inset) / ts;
-		int right = (int) (newX + ts - inset - 1) / ts;
-		int top = (int) (newY + inset) / ts;
-		int bottom = (int) (newY + ts - inset - 1) / ts;
+		int left = (int) (newX + inset) / ts, right = (int) (newX + ts - inset - 1) / ts;
+		int top = (int) (newY + inset) / ts, bottom = (int) (newY + ts - inset - 1) / ts;
 
 		boolean blocked = isWall(map, top, left) || isWall(map, top, right) || isWall(map, bottom, left)
 				|| isWall(map, bottom, right);
@@ -141,6 +156,7 @@ public class Player extends Entity {
 		return t == '#' || t == 'D';
 	}
 
+	/** Updates animationState from the current movement delta. */
 	private void updateAnimState(float dx, float dy) {
 		if (dy < 0)
 			animState = AnimationState.WALK_UP;
@@ -154,6 +170,12 @@ public class Player extends Entity {
 			animState = AnimationState.IDLE;
 	}
 
+	/**
+	 * Draws the player sprite. Flashes at 40% opacity during invincibility frames;
+	 * shows a pulsing blue glow while blocking.
+	 *
+	 * @param g graphics context
+	 */
 	@Override
 	public void draw(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;
@@ -164,10 +186,8 @@ public class Player extends Entity {
 		int dirIndex = animStateToIndex();
 		int frameIndex = (animState == AnimationState.IDLE) ? 0 : animFrame;
 		g2.drawImage(frames[dirIndex][frameIndex], getPixelX(), getPixelY(), null);
-
 		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
 
-		// Draw shield overlay when blocking
 		if (blocking) {
 			int px = getPixelX(), py = getPixelY(), s = MazeMap.TILE_SIZE;
 			float pulse = (float) Math.abs(Math.sin(blockTicks * 0.18));
@@ -181,6 +201,7 @@ public class Player extends Entity {
 		}
 	}
 
+	/** Maps the current animation state to a sprite-sheet direction row index. */
 	private int animStateToIndex() {
 		return switch (animState) {
 		case WALK_UP -> 0;
@@ -191,41 +212,54 @@ public class Player extends Entity {
 		};
 	}
 
+	/** Returns lives remaining. */
 	public int getLives() {
 		return lives;
 	}
 
+	/** Returns the current score. */
 	public int getScore() {
 		return score;
 	}
 
+	/** Returns the number of keys held. */
 	public int getKeysHeld() {
 		return keysHeld;
 	}
 
+	/** Returns {@code true} while invincibility frames are active. */
 	public boolean isInvincible() {
 		return damageCooldown > 0;
 	}
 
+	/** Returns {@code true} while the shield block is active. */
 	public boolean isBlocking() {
 		return blocking;
 	}
 
+	/** Returns the current block charge (0 – max-charge). */
 	public int getBlockCharge() {
 		return blockCharge;
 	}
 
+	/** Returns ticks remaining on the active block. */
 	public int getBlockTicks() {
 		return blockTicks;
 	}
 
+	/**
+	 * Applies one unit of damage.
+	 *
+	 * <p>
+	 * If blocking, the block absorbs the hit (ends early, charge resets).
+	 * Otherwise, deducts one life and starts the invincibility cooldown.
+	 */
 	public void takeDamage() {
 		if (blocking) {
-			// Block absorbs the hit — end the block early and start recharging
 			blocking = false;
 			blockTicks = 0;
 			blockCharge = 0;
-			damageCooldown = DAMAGE_COOLDOWN_TICKS; // brief invincibility so zombie steps back
+			damageCooldown = DAMAGE_COOLDOWN_TICKS;
 			return;
 		}
 		if (damageCooldown == 0) {
@@ -235,14 +269,25 @@ public class Player extends Entity {
 		}
 	}
 
+	/**
+	 * Adds points to the player's score.
+	 *
+	 * @param pts points to add
+	 */
 	public void addScore(int pts) {
 		score += pts;
 	}
 
+	/** Gives the player one key. */
 	public void addKey() {
 		keysHeld++;
 	}
 
+	/**
+	 * Consumes one key from the player's inventory.
+	 *
+	 * @return {@code true} if a key was consumed; {@code false} if none held
+	 */
 	public boolean useKey() {
 		if (keysHeld > 0) {
 			keysHeld--;

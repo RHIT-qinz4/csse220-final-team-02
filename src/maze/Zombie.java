@@ -21,19 +21,30 @@ public class Zombie extends Entity {
 	private static final int NUM_FRAMES = 3;
 
 	private final Random rand;
+
+	/** Current direction: 0 up, 1 down, 2 left, 3 right. */
 	private int direction;
 	private int dirTimer;
 
 	private boolean huntMode = false;
 	private int huntRecalcTimer = 0;
+
+	/** BFS waypoints as grid coordinates. */
 	private final Deque<int[]> path = new ArrayDeque<>();
 
 	private AnimationState animState = AnimationState.WALK_DOWN;
 	private int animTick = 0;
 	private int animFrame = 0;
 
+	/**
+	 * Sprite frames: . Direction rows — 0 up, 1 down, 2 left, 3 right.
+	 */
 	private final BufferedImage[][] frames;
 
+	/**
+	 * @param x initial X position in pixels
+	 * @param y initial Y position in pixels
+	 */
 	public Zombie(float x, float y) {
 		super(x, y);
 		rand = new Random();
@@ -42,12 +53,22 @@ public class Zombie extends Entity {
 		frames = SpriteLoader.loadZombieFrames(MazeMap.TILE_SIZE);
 	}
 
+	/**
+	 * Switches this zombie into hunt mode. Called by {@link GamePanel} when all
+	 * gems have been collected.
+	 */
 	public void activateHuntMode() {
 		huntMode = true;
 		huntRecalcTimer = 0;
 		path.clear();
 	}
 
+	/**
+	 * Advances AI and animation one tick.
+	 *
+	 * @param map    current maze
+	 * @param player the player entity
+	 */
 	public void update(MazeMap map, Player player) {
 		if (huntMode) {
 			updateHunt(map, player);
@@ -57,26 +78,25 @@ public class Zombie extends Entity {
 			updateRandomWalk(map);
 		}
 
-		animTick++;
-		if (animTick >= ANIM_FRAME_DURATION) {
+		if (++animTick >= ANIM_FRAME_DURATION) {
 			animTick = 0;
 			animFrame = (animFrame + 1) % NUM_FRAMES;
 		}
 	}
 
+	/** Fallback update without a player reference; performs random walk only. */
 	@Override
 	public void update(MazeMap map) {
 		updateRandomWalk(map);
-		animTick++;
-		if (animTick >= ANIM_FRAME_DURATION) {
+		if (++animTick >= ANIM_FRAME_DURATION) {
 			animTick = 0;
 			animFrame = (animFrame + 1) % NUM_FRAMES;
 		}
 	}
 
+	/** Picks a random direction and moves; re-rolls direction when blocked. */
 	private void updateRandomWalk(MazeMap map) {
-		dirTimer--;
-		if (dirTimer <= 0) {
+		if (--dirTimer <= 0) {
 			direction = rand.nextInt(4);
 			dirTimer = DIRECTION_HOLD + rand.nextInt(40);
 		}
@@ -94,80 +114,73 @@ public class Zombie extends Entity {
 		}
 	}
 
+	/**
+	 * Returns true if the player is in the same row or column, the zombie faces
+	 * them, and no wall is between them.
+	 */
 	private boolean hasLineOfSight(MazeMap map, Player player) {
 		int ts = MazeMap.TILE_SIZE;
-		int myRow = Math.round(y) / ts;
-		int myCol = Math.round(x) / ts;
-		int pRow = player.getPixelY() / ts;
-		int pCol = player.getPixelX() / ts;
+		int myRow = Math.round(y) / ts, myCol = Math.round(x) / ts;
+		int pRow = player.getPixelY() / ts, pCol = player.getPixelX() / ts;
 
-		int facingDRow = 0, facingDCol = 0;
+		int fRow = 0, fCol = 0;
 		switch (direction) {
-		case 0 -> facingDRow = -1;
-		case 1 -> facingDRow = 1;
-		case 2 -> facingDCol = -1;
-		case 3 -> facingDCol = 1;
+		case 0 -> fRow = -1;
+		case 1 -> fRow = 1;
+		case 2 -> fCol = -1;
+		case 3 -> fCol = 1;
 		}
 
-		if (myRow == pRow && facingDRow == 0) {
-			int toPlayerCol = pCol - myCol;
-			if (toPlayerCol == 0)
+		if (myRow == pRow && fRow == 0) {
+			int diff = pCol - myCol;
+			if (diff == 0)
 				return false;
-			boolean ahead = (facingDCol > 0 && toPlayerCol > 0) || (facingDCol < 0 && toPlayerCol < 0);
-			if (!ahead)
+			if (!((fCol > 0 && diff > 0) || (fCol < 0 && diff < 0)))
 				return false;
-			int minC = Math.min(myCol, pCol);
-			int maxC = Math.max(myCol, pCol);
-			for (int c = minC + 1; c < maxC; c++)
+			for (int c = Math.min(myCol, pCol) + 1; c < Math.max(myCol, pCol); c++)
 				if (map.getTile(myRow, c) == '#')
 					return false;
 			return true;
 		}
-
-		if (myCol == pCol && facingDCol == 0) {
-			int toPlayerRow = pRow - myRow;
-			if (toPlayerRow == 0)
+		if (myCol == pCol && fCol == 0) {
+			int diff = pRow - myRow;
+			if (diff == 0)
 				return false;
-			boolean ahead = (facingDRow > 0 && toPlayerRow > 0) || (facingDRow < 0 && toPlayerRow < 0);
-			if (!ahead)
+			if (!((fRow > 0 && diff > 0) || (fRow < 0 && diff < 0)))
 				return false;
-			int minR = Math.min(myRow, pRow);
-			int maxR = Math.max(myRow, pRow);
-			for (int r = minR + 1; r < maxR; r++)
+			for (int r = Math.min(myRow, pRow) + 1; r < Math.max(myRow, pRow); r++)
 				if (map.getTile(r, myCol) == '#')
 					return false;
 			return true;
 		}
-
 		return false;
 	}
 
+	/** Moves directly toward the player along the dominant axis. */
 	private void updateChase(Player player) {
-		float cx = x + MazeMap.TILE_SIZE / 2f;
-		float cy = y + MazeMap.TILE_SIZE / 2f;
+		float cx = x + MazeMap.TILE_SIZE / 2f, cy = y + MazeMap.TILE_SIZE / 2f;
 		float px = player.getPixelX() + MazeMap.TILE_SIZE / 2f;
 		float py = player.getPixelY() + MazeMap.TILE_SIZE / 2f;
-
 		float dx = 0, dy = 0;
 		if (Math.abs(cx - px) > Math.abs(cy - py))
 			dx = (px > cx) ? SPEED : -SPEED;
 		else
 			dy = (py > cy) ? SPEED : -SPEED;
-
 		updateAnimState(dx, dy);
 		x += dx;
 		y += dy;
 	}
 
+	/**
+	 * Follows the BFS path toward the player. Recalculates the path when the timer
+	 * expires or the path is empty.
+	 */
 	private void updateHunt(MazeMap map, Player player) {
 		int ts = MazeMap.TILE_SIZE;
-		int myRow = Math.round(y) / ts;
-		int myCol = Math.round(x) / ts;
-		int pRow = player.getPixelY() / ts;
-		int pCol = player.getPixelX() / ts;
+		int myRow = Math.round(y) / ts, myCol = Math.round(x) / ts;
+		int pRow = player.getPixelY() / ts, pCol = player.getPixelX() / ts;
 
-		huntRecalcTimer--;
-		if (huntRecalcTimer <= 0 || path.isEmpty()) {
+		if (--huntRecalcTimer <= 0 || path.isEmpty()) {
 			bfsRecalculate(map, myRow, myCol, pRow, pCol);
 			huntRecalcTimer = HUNT_RECALC_INTERVAL;
 		}
@@ -178,10 +191,8 @@ public class Zombie extends Entity {
 		}
 
 		int[] next = path.peek();
-		float targetX = next[1] * ts;
-		float targetY = next[0] * ts;
-		float diffX = targetX - x;
-		float diffY = targetY - y;
+		float targetX = next[1] * ts, targetY = next[0] * ts;
+		float diffX = targetX - x, diffY = targetY - y;
 		float dx = 0, dy = 0;
 
 		if (Math.abs(diffX) > HUNT_SPEED)
@@ -200,6 +211,10 @@ public class Zombie extends Entity {
 		y += dy;
 	}
 
+	/**
+	 * Computes a BFS shortest path from start to goal and stores it in Does nothing
+	 * if no path exists.
+	 */
 	private void bfsRecalculate(MazeMap map, int startRow, int startCol, int goalRow, int goalCol) {
 		path.clear();
 		int rows = map.getRows(), cols = map.getCols();
@@ -237,18 +252,23 @@ public class Zombie extends Entity {
 
 		if (!found)
 			return;
-		Deque<int[]> reversed = new ArrayDeque<>();
+
+		Deque<int[]> rev = new ArrayDeque<>();
 		int r = goalRow, c = goalCol;
 		while (!(r == startRow && c == startCol)) {
-			reversed.push(new int[] { r, c });
+			rev.push(new int[] { r, c });
 			int idx = r * cols + c;
 			r = parent[idx][0];
 			c = parent[idx][1];
 		}
-		while (!reversed.isEmpty())
-			path.add(reversed.pop());
+		while (!rev.isEmpty())
+			path.add(rev.pop());
 	}
 
+	/**
+	 * Attempts to move by (dx, dy); returns false if any corner hits a wall and
+	 * leaves position unchanged.
+	 */
 	private boolean tryMove(MazeMap map, float dx, float dy) {
 		float nx = x + dx, ny = y + dy;
 		int ts = MazeMap.TILE_SIZE, inset = 4;
@@ -262,6 +282,7 @@ public class Zombie extends Entity {
 		return true;
 	}
 
+	/** Updates animationState from the current movement delta. */
 	private void updateAnimState(float dx, float dy) {
 		if (dy < 0)
 			animState = AnimationState.WALK_UP;
@@ -273,6 +294,13 @@ public class Zombie extends Entity {
 			animState = AnimationState.WALK_RIGHT;
 	}
 
+	/**
+	 * Pushes this zombie one tile away from the player after a hit. Clears the BFS
+	 * path so hunt-mode resumes correctly.
+	 *
+	 * @param player source of the push direction
+	 * @param map    used to verify the target tile is not a wall
+	 */
 	public void catapult(Player player, MazeMap map) {
 		int ts = MazeMap.TILE_SIZE;
 		float pushX = x - player.x, pushY = y - player.y;
@@ -290,6 +318,12 @@ public class Zombie extends Entity {
 		huntRecalcTimer = 0;
 	}
 
+	/**
+	 * Draws the zombie. In hunt mode a pulsing red aura is shown behind the sprite
+	 * to warn the player.
+	 *
+	 * @param g graphics context
+	 */
 	@Override
 	public void draw(Graphics g) {
 		if (huntMode) {
